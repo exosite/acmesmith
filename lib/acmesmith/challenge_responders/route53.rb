@@ -1,4 +1,5 @@
 require 'acmesmith/challenge_responders/base'
+require 'acmesmith/utils/aws'
 
 require 'aws-sdk-route53'
 
@@ -23,7 +24,7 @@ module Acmesmith
 
       def initialize(aws_access_key: nil, hosted_zone_map: {})
         @default_route53 = Aws::Route53::Client.new({region: 'us-east-1'}.tap do |opt|
-          opt[:credentials] = Aws::Credentials.new(aws_access_key['access_key_id'], aws_access_key['secret_access_key'], aws_access_key['session_token']) if aws_access_key
+          Acmesmith::Utils::Aws.addClientCredential(opt,aws_access_key)
         end)
         @hosted_zone_map = hosted_zone_map
         @hosted_zone_cache = {}
