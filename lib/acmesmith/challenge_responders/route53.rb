@@ -18,16 +18,36 @@ module Acmesmith
         true
       end
 
+      def zone_domain_map
+        @zone_domain_map ||=
+          @hosted_zone_map.to_a.map(&:reverse).to_h
+      end
+
       def route53_for_zone(zone_id)
-        @default_route53
+        domain = zone_domain_map[zone_id]
+        @domain_route53_map.fetch(zone_id, @default_route53)
       end
 
       def initialize(aws_access_key: nil, hosted_zone_map: {})
         @default_route53 = Aws::Route53::Client.new({region: 'us-east-1'}.tap do |opt|
           Acmesmith::Utils::Aws.addClientCredential(opt,aws_access_key)
         end)
-        @hosted_zone_map = hosted_zone_map
-        @hosted_zone_cache = {}
+        @hosted_zone_map = hosted_zone_map.map do |domain, hash_or_zone_id|
+          domain = "#{canonical_fqdn(domain)}."
+          zone_id = hash_or_zone_id.is_a?(Hash) ? hash_or_zone_id["zone_id"] : hash_or_zone_id
+          [domain, zone_id]
+        end.to_h
+        arn_route53_cache = {}
+        @domain_route53_map = hosted_zone_map.transform_values do |hash_or_zone_id|
+          next @default_route53 unless hash_or_zone_id.is_a?(Hash)
+          role_arn = hash_or_zone_id["role_arn"]
+          next arn_route53_cache[role_arn] if arn_route53_cache[role_arn]
+          route53 = Aws::Route53::Client.new({region: 'us-east-1'}.tap do |opt|
+            Acmesmith::Utils::Aws.addClientCredential(opt,aws_access_key, role_arn)
+          end)
+          arn_route53_cache[role_arn] = route53
+          route53
+        end
       end
 
       def respond_all(*domain_and_challenges)
