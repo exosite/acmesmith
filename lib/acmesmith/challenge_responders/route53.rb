@@ -17,8 +17,12 @@ module Acmesmith
         true
       end
 
+      def route53_for_zone(zone_id)
+        @default_route53
+      end
+
       def initialize(aws_access_key: nil, hosted_zone_map: {})
-        @route53 = Aws::Route53::Client.new({region: 'us-east-1'}.tap do |opt| 
+        @default_route53 = Aws::Route53::Client.new({region: 'us-east-1'}.tap do |opt|
           opt[:credentials] = Aws::Credentials.new(aws_access_key['access_key_id'], aws_access_key['secret_access_key'], aws_access_key['session_token']) if aws_access_key
         end)
         @hosted_zone_map = hosted_zone_map
@@ -32,8 +36,8 @@ module Acmesmith
           [zone_id, change_batch_for_challenges(dcs, action: 'UPSERT')]
         end
 
-        change_ids = request_changing_rrset(zone_and_batches, comment: 'for challenge response')
-        wait_for_sync(change_ids)
+        zone_to_change_ids = request_changing_rrset(zone_and_batches, comment: 'for challenge response')
+        wait_for_sync(zone_to_change_ids)
       end
 
       def cleanup_all(*domain_and_challenges)
@@ -51,7 +55,7 @@ module Acmesmith
       def request_changing_rrset(zone_and_batches, comment: nil)
         puts "=> Requesting RRSet change #{comment}"
         puts
-        change_ids = zone_and_batches.map do |(zone_id, change_batch)|
+        zone_to_change_ids = zone_and_batches.map do |(zone_id, change_batch)|
           puts " * #{zone_id}:"
           change_batch.fetch(:changes).each do |b|
             rrset = b.fetch(:resource_record_set)
@@ -61,7 +65,7 @@ module Acmesmith
           end
           print "   ... "
 
-          resp =  @route53.change_resource_record_sets(
+          resp =  route53_for_zone(zone_id).change_resource_record_sets(
             hosted_zone_id: zone_id, # required
             change_batch: change_batch,
           )
@@ -69,14 +73,14 @@ module Acmesmith
 
           puts "[ ok ] #{change_id}"
           puts
-          change_id
+          [zone_id, change_id]
         end
 
-        change_ids
+        zone_to_change_ids.to_h
       end
 
 
-      def wait_for_sync(change_ids)
+      def wait_for_sync(zone_to_change_ids)
         puts "=> Waiting for change to be in sync"
         puts
 
@@ -85,13 +89,13 @@ module Acmesmith
           sleep 4
 
           all_sync = true
-          change_ids.each do |id|
-            change = @route53.get_change(id: id)
+          zone_to_change_ids.each do |zone_id,change_id|
+            change = route53_for_zone(zone_id).get_change(id: change_id)
 
             sync = change.change_info.status == 'INSYNC'
             all_sync = false unless sync
 
-            puts " * #{id}: #{change.change_info.status}"
+            puts " * #{change_id}: #{change.change_info.status}"
             sleep 0.2
           end
         end
@@ -163,7 +167,7 @@ module Acmesmith
 
       def hosted_zone_list
         @hosted_zone_list ||= begin
-          @route53.list_hosted_zones.each.flat_map do |page|
+          @default_route53.list_hosted_zones.each.flat_map do |page|
             page.hosted_zones
               .reject { |zone| zone.config.private_zone }
               .map {  |zone| [zone.name, zone.id] }
