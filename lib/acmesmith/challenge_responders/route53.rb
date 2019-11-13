@@ -35,8 +35,9 @@ module Acmesmith
         @hosted_zone_map = hosted_zone_map.map do |domain, hash_or_zone_id|
           domain = "#{canonical_fqdn(domain)}."
           zone_id = hash_or_zone_id.is_a?(Hash) ? hash_or_zone_id["zone_id"] : hash_or_zone_id
+          next nil unless zone_id
           [domain, zone_id]
-        end.to_h
+        end.compact.to_h
         arn_route53_cache = {}
         @domain_route53_map = hosted_zone_map.transform_values do |hash_or_zone_id|
           next @default_route53 unless hash_or_zone_id.is_a?(Hash)
@@ -186,15 +187,24 @@ module Acmesmith
         }.to_h
       end
 
+      def get_zone_list_for_route53(route53)
+        route53.list_hosted_zones.each.flat_map do |page|
+          page.hosted_zones
+            .reject { |zone| zone.config.private_zone }
+            .map {  |zone| [zone.name, zone.id] }
+        end.group_by(&:first).map { |domain, kvs| [domain, kvs.map(&:last)] }.to_h
+      end
+
       def hosted_zone_list
         @hosted_zone_list ||= begin
-          @default_route53.list_hosted_zones.each.flat_map do |page|
-            page.hosted_zones
-              .reject { |zone| zone.config.private_zone }
-              .map {  |zone| [zone.name, zone.id] }
-          end.group_by(&:first).map { |domain, kvs| [domain, kvs.map(&:last)] }.to_h.merge(hosted_zone_map)
+          route53_clients = @domain_route53_map.values.uniq + [@default_route53] #later one have higher priority
+          hosted_zone_lists = route53_clients.map do |route53|
+            get_zone_list_for_route53(route53)
+          end
+          hosted_zone_lists.fetch(0,{}).merge(*hosted_zone_lists[1..-1]).merge(hosted_zone_map)
         end
       end
+
     end
   end
 end
