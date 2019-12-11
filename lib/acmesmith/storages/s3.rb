@@ -3,11 +3,12 @@ require 'aws-sdk-s3'
 require 'acmesmith/storages/base'
 require 'acmesmith/account_key'
 require 'acmesmith/certificate'
+require 'acmesmith/utils/aws'
 
 module Acmesmith
   module Storages
     class S3 < Base
-      def initialize(aws_access_key: nil, bucket:, prefix: nil, region:, use_kms: true, kms_key_id: nil, kms_key_id_account: nil, kms_key_id_certificate_key: nil, pkcs12_passphrase: nil, pkcs12_common_names: nil)
+      def initialize(aws_access_key: nil, bucket:, prefix: nil, region:, use_kms: true, kms_key_id: nil, kms_key_id_account: nil, kms_key_id_certificate_key: nil, pkcs12_passphrase: nil, pkcs12_common_names: nil, role_arn)
         @region = region
         @bucket = bucket
         @prefix = prefix
@@ -24,7 +25,7 @@ module Acmesmith
         @kms_key_id_certificate_key = kms_key_id_certificate_key
 
         @s3 = Aws::S3::Client.new({region: region, signature_version: 'v4'}.tap do |opt| 
-          opt[:credentials] = Aws::Credentials.new(aws_access_key['access_key_id'], aws_access_key['secret_access_key'], aws_access_key['session_token']) if aws_access_key
+          ::Acmesmith::Utils::Aws.addClientCredential(opt, aws_access_key, role_arn)
         end)
       end
 
