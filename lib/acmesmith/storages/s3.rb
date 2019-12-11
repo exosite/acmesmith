@@ -8,7 +8,7 @@ require 'acmesmith/utils/aws'
 module Acmesmith
   module Storages
     class S3 < Base
-      def initialize(aws_access_key: nil, bucket:, prefix: nil, region:, use_kms: true, kms_key_id: nil, kms_key_id_account: nil, kms_key_id_certificate_key: nil, pkcs12_passphrase: nil, pkcs12_common_names: nil, role_arn)
+      def initialize(aws_access_key: nil, bucket:, prefix: nil, region:, use_kms: true, kms_key_id: nil, kms_key_id_account: nil, kms_key_id_certificate_key: nil, pkcs12_passphrase: nil, pkcs12_common_names: nil, role_arn: nil)
         @region = region
         @bucket = bucket
         @prefix = prefix
