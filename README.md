@@ -139,6 +139,7 @@ challenge_responders:
       #   access_key_id:
       #   secret_access_key:
       #   session_token:
+      #   role_arn: "arn:aws:iam::123451234512:role/default_route53_role"
       # hosted_zone_map: # hosted zone map (optional); This is to specify exactly one hosted zone to use. This will be required when there are multiple hosted zone with same domain name. Usually
       #   "example.org.": "/hostedzone/DEADBEEF"
       #   Alternative format: Add support for role_arn. Useful when having zones in multiple accounts.

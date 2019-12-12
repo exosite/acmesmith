@@ -32,9 +32,9 @@ module Acmesmith
         @domain_route53_map.fetch(domain,  @default_route53)
       end
 
-      def initialize(aws_access_key: nil, hosted_zone_map: {})
+      def initialize(aws_access_key: nil, role_arn: nil, hosted_zone_map: {})
         @default_route53 = Aws::Route53::Client.new({region: 'us-east-1'}.tap do |opt|
-          Acmesmith::Utils::Aws.addClientCredential(opt,aws_access_key)
+          Acmesmith::Utils::Aws.addClientCredential(opt,aws_access_key, role_arn)
         end)
         hosted_zone_map.transform_keys! do |domain|
           "#{canonical_fqdn(domain)}."
