@@ -40,6 +40,19 @@ module Acmesmith
       end
     end
 
+    desc "order-from-config", "order all certificates in the config file"
+    def order_from_config
+      certs = client.config.cerfificates
+      certs.each do |cert|
+        case cert
+        when String
+          client.order(cert)
+        when Array
+          client.order(*cert)
+        end
+      end
+    end
+
     desc "post-issue-hooks COMMON_NAME", "Run all post-issuing hooks for common name. (for testing purpose)"
     def post_issue_hooks(common_name)
       client.post_issue_hooks(common_name)
