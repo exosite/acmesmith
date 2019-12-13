@@ -44,6 +44,11 @@ module Acmesmith
       @config['account_key_passphrase']
     end
 
+    def certificates
+      certs = @config["certificates"]
+      certs.map{ |c| c.is_a?(String) ? [c] : c}
+    end
+
     def certificate_key_passphrase
       @config['certificate_key_passphrase']
     end

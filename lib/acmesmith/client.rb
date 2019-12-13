@@ -153,9 +153,7 @@ module Acmesmith
     end
 
     def order_from_config(days: 7)
-      certs = config.cerfificates
-      names = certs.map{ |c| c.is_a?(String) ? [c] : c}
-      names.each do |name|
+      config.certificates.each do |name|
         begin
           puts "=> #{name}"
           cert = storage.get_certificate(cn)
