@@ -152,6 +152,25 @@ module Acmesmith
       SaveCertificateService.new(cert, **kwargs).perform!
     end
 
+    def order_from_config(days: 7)
+      certs = config.cerfificates
+      names = certs.map{ |c| c.is_a?(String) ? [c] : c}
+      names.each do |name|
+        begin
+          puts "=> #{name}"
+          cert = storage.get_certificate(cn)
+          not_after = cert.certificate.not_after.utc
+          puts "   Not valid after: #{not_after}"
+          next unless (cert.certificate.not_after.utc - Time.now.utc) < (days.to_i * 86400)
+          puts " * Renewing: CN=#{cert.common_name}, SANs=#{cert.sans.join(',')}"
+          order(cert.common_name, *cert.sans)
+        rescue ::Acmesmith::Storages::NotExist
+          puts "   New cert, start ordering"
+          order(*name)
+        end
+      end
+    end
+
     def autorenew(days: 7, common_names: nil)
       (common_names || storage.list_certificates).each do |cn|
         puts "=> #{cn}"
