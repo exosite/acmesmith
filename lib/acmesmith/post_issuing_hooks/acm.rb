@@ -4,13 +4,14 @@ require 'acmesmith/post_issuing_hooks/base'
 module Acmesmith
   module PostIssuingHooks
     class Acm < Base
-      def initialize(certificate_arn: nil, region:)
+      def initialize(certificate_arn: nil, role_arn: nil, region:)
         @certificate_arn = certificate_arn
         @certificate_arn_set = true if @certificate_arn
         @region = region
+        @role_arn = role_arn
       end
 
-      attr_reader :region
+      attr_reader :region, :role_arn
 
       def certificate_arn
         return @certificate_arn if @certificate_arn_set
@@ -33,7 +34,9 @@ module Acmesmith
       end
 
       def acm
-        @acm ||= Aws::ACM::Client.new(region: region)
+        @acm ||= Aws::ACM::Client.new({region: region}.tap do |opt|
+          ::Acmesmith::Utils::Aws.addClientCredential(opt,nil,role_arn)
+        end)
       end
 
       def execute
