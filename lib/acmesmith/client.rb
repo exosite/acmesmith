@@ -162,7 +162,7 @@ module Acmesmith
           next unless (cert.certificate.not_after.utc - Time.now.utc) < (days.to_i * 86400)
           puts " * Renewing: CN=#{cert.common_name}, SANs=#{cert.sans.join(',')}"
           order(cert.common_name, *cert.sans)
-        rescue ::Acmesmith::Storages::NotExist
+        rescue ::Acmesmith::Storages::Base::NotExist
           puts "   New cert, start ordering"
           order(*name)
         end
