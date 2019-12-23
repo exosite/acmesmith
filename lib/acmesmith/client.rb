@@ -156,7 +156,7 @@ module Acmesmith
       config.certificates.each do |name|
         begin
           puts "=> #{name}"
-          cert = storage.get_certificate(cn)
+          cert = storage.get_certificate(name.first)
           not_after = cert.certificate.not_after.utc
           puts "   Not valid after: #{not_after}"
           next unless (cert.certificate.not_after.utc - Time.now.utc) < (days.to_i * 86400)
